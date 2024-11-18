@@ -1,0 +1,34 @@
+server:
+  port: 8081
+spring:
+  profiles:
+    active: dev
+  main:
+    allow-circular-references: true
+  application:
+    name: redislearning
+  datasource:
+      driver-class-name: ${dianping.datasource.driver-class-name}
+      url: jdbc:mysql://${dianping.datasource.host}:${dianping.datasource.port}/${dianping.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${dianping.datasource.username}
+      password: ${dianping.datasource.password}
+      type: com.alibaba.druid.pool.DruidDataSource
+  jackson:
+    default-property-inclusion: non_null # JSON处理时忽略非空字段
+  data:
+    redis:
+      host: ${dianping.redis.host}
+      port: ${dianping.redis.port}
+      password: ${dianping.redis.password}
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 10
+          min-idle: 1
+          time-between-eviction-runs: 10s
+      database: ${dianping.redis.database}
+mybatis-plus:
+  type-aliases-package: com.swimmingliu.redislearning.entity # 别名扫描包
+logging:
+  level:
+    com.swimmingliu.redislearning: debug
