@@ -8,6 +8,8 @@ import com.swimmingliu.redislearning.entity.UserInfo;
 import com.swimmingliu.redislearning.service.IUserInfoService;
 import com.swimmingliu.redislearning.service.IUserService;
 import com.swimmingliu.redislearning.context.UserHolder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/user")
+@Tag(name = "用户登录")
 public class UserController {
 
     @Resource
@@ -33,9 +36,11 @@ public class UserController {
     @Resource
     private IUserInfoService userInfoService;
 
+
     /**
      * 发送手机验证码
      */
+    @Operation(summary = "发送手机验证码")
     @PostMapping("code")
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
         return userService.sendCode(phone, session);
@@ -45,6 +50,7 @@ public class UserController {
      * 登录功能
      * @param loginForm 登录参数，包含手机号、验证码；或者手机号、密码
      */
+    @Operation(summary = "登录功能")
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
         return userService.login(loginForm, session);
@@ -54,17 +60,20 @@ public class UserController {
      * 登出功能
      * @return 无
      */
+    @Operation(summary = "注销功能")
     @PostMapping("/logout")
     public Result logout(){
         return userService.logout();
     }
 
+    @Operation(summary = "获取个人信息")
     @GetMapping("/me")
     public Result me(){
         UserDTO user = UserHolder.getUser();
         return Result.ok(user);
     }
 
+    @Operation(summary = "根据id获取个人信息")
     @GetMapping("/info/{id}")
     public Result info(@PathVariable("id") Long userId){
         // 查询详情

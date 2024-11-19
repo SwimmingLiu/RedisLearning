@@ -8,14 +8,14 @@ import com.swimmingliu.redislearning.entity.Shop;
 import com.swimmingliu.redislearning.mapper.ShopMapper;
 import com.swimmingliu.redislearning.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.swimmingliu.redislearning.utils.CacheCient;
 import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.swimmingliu.redislearning.constant.RedisConstants.CACHE_SHOP_KEY;
-import static com.swimmingliu.redislearning.constant.RedisConstants.CACHE_SHOP_TTL;
+import static com.swimmingliu.redislearning.constant.RedisConstants.*;
 
 /**
  * <p>
@@ -30,6 +30,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private CacheCient cacheCient;
 
     /**
      * Redis 缓存查询
@@ -38,31 +40,26 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
      * @return
      */
     @Override
-    public Result queryById(Long id) {
-        // 1. 查看缓存
-        String shopJson = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
-        // 2. 若存在，直接返回
-        if (StrUtil.isNotBlank(shopJson)) {
-            Shop shop = JSONUtil.toBean(shopJson, Shop.class);
-            return Result.ok(shop);
-        }
-        // 3. 不存在，查询数据库
-        Shop shop = getById(id);
+    public Result queryById(Long id) throws InterruptedException {
+//        // 解决缓存穿透
+//        Shop shop = cacheCient.queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById,
+//                CACHE_SHOP_TTL, TimeUnit.MINUTES);
+        // 解决缓存击穿 - 互斥锁
+//        Shop shop = cacheCient.queryWithMutexLock(CACHE_SHOP_KEY, id, Shop.class, this::getById,
+//                CACHE_SHOP_TTL, TimeUnit.MINUTES, LOCK_SHOP_KEY, LOCK_SHOP_TTL);
+        // 解决缓存击穿 - 逻辑过期
+        Shop shop = cacheCient.queryWithLogicExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById,
+                CACHE_SHOP_TTL, TimeUnit.MINUTES, LOCK_SHOP_KEY, LOCK_SHOP_TTL);
         if (shop == null) {
-             stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY + id, "",
-                     CACHE_SHOP_TTL, TimeUnit.MINUTES);
             return Result.fail("店铺不存在");
         }
-        // 4. 添加缓存
-        stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY + id,
-                JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL, TimeUnit.MINUTES);
         return Result.ok(shop);
     }
 
     @Override
     public Result updateShop(Shop shop) {
         Long id = shop.getId();
-        if (id == null){
+        if (id == null) {
             return Result.fail("店铺ID不能为空");
         }
         updateById(shop);

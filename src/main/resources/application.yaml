@@ -32,3 +32,28 @@ mybatis-plus:
 logging:
   level:
     com.swimmingliu.redislearning: debug
+# springdoc-openapi项目配置
+springdoc:
+  default-flat-param-object: true
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: order
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.swimmingliu.redislearning.controller
+# knife4j的增强配置，不需要增强可以不配
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    enable-dynamic-parameter: false
+    footer-custom-content: "<strong>Copyright ©️ 2024 SwimmingLiu. All Rights Reversed</strong>"
+    enable-footer-custom: true
+    enable-footer: true
+    enable-document-manage: true
