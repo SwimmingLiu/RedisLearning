@@ -2,11 +2,14 @@ package com.swimmingliu.redislearning;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class DemoTest {
-        @Test
+    @Test
     void lambdaTest(){
         // 示例 1：使用 Lambda 遍历列表
         List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
@@ -29,4 +32,11 @@ public class DemoTest {
         // 打印排序后的列表
         System.out.println("Sorted names: " + unsortedNames);
     }
+
+    @Test
+    void genTimeStamp(){
+        LocalDateTime localDateTime = LocalDateTime.of(2024,9,21,0,0);
+        System.out.println(localDateTime.toEpochSecond(ZoneOffset.UTC));
+    }
+
 }

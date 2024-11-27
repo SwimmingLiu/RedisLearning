@@ -7,11 +7,15 @@ import com.swimmingliu.redislearning.mapper.VoucherMapper;
 import com.swimmingliu.redislearning.entity.SeckillVoucher;
 import com.swimmingliu.redislearning.service.ISeckillVoucherService;
 import com.swimmingliu.redislearning.service.IVoucherService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Resource;
 import java.util.List;
+
+import static com.swimmingliu.redislearning.constant.RedisConstants.SECKILL_STOCK_KEY;
 
 /**
  * <p>
@@ -26,7 +30,8 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
 
     @Resource
     private ISeckillVoucherService seckillVoucherService;
-
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
     @Override
     public Result queryVoucherOfShop(Long shopId) {
         // 查询优惠券信息
@@ -46,6 +51,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
         seckillVoucher.setStock(voucher.getStock());
         seckillVoucher.setBeginTime(voucher.getBeginTime());
         seckillVoucher.setEndTime(voucher.getEndTime());
-        seckillVoucherService.save(seckillVoucher);
+//        seckillVoucherService.save(seckillVoucher);
+        stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY + voucher.getId(), voucher.getStock().toString());
     }
 }

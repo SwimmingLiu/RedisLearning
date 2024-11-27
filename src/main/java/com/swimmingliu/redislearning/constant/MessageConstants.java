@@ -5,5 +5,10 @@ public class MessageConstants {
     public static final String LOGIN_CODE_FORMAT_INVALID = "验证码格式错误";
     public static final String LOGIN_CODE_EXPIRED = "验证码已过期";
     public static final String LOGIN_CODE_ERROR = "验证码错误";
+    public static final String VOUCHER_NOT_FOUND = "优惠券不存在";
+    public static final String VOUCHER_ACTIVITY_NOT_BEGIN = "秒杀活动还未开始";
+    public static final String VOUCHER_ACTIVITY_ALREADY_END = "秒杀活动已结束";
+    public static final String VOUCHER_STOCK_NOT_ENOUGH = "优惠券库存已不足";
+
 
 }
