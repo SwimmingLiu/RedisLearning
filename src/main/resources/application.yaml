@@ -2,7 +2,7 @@ server:
   port: 8081
 spring:
   profiles:
-    active: dev
+    active: dev # Spring Boot 会根据不同的 profile 加载不同的配置文件中的重复字段名称。
   main:
     allow-circular-references: true
   application:
@@ -26,7 +26,7 @@ spring:
           max-idle: 10
           min-idle: 1
           time-between-eviction-runs: 10s
-      database: ${dianping.redis.database}
+      database: ${dianping.redis.database-num}
   aop:
     proxy-target-class: true
 mybatis-plus:

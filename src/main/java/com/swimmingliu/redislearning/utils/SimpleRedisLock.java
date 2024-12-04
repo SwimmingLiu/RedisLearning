@@ -3,13 +3,9 @@ package com.swimmingliu.redislearning.utils;
 
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.BooleanUtil;
-import org.springframework.boot.web.embedded.tomcat.TomcatReactiveWebServerFactory;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.PathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +16,6 @@ public class SimpleRedisLock implements ILock {
     private static final String KEY_PREFIX = "lock:";
     private static final String THREAD_SIGN_PREFIX = UUID.randomUUID().toString(true) + "-";
     private static final DefaultRedisScript<Long> UNLOCK_SCRIPT;
-
     static {
         UNLOCK_SCRIPT = new DefaultRedisScript<>();
         // 设置lua文件位置
