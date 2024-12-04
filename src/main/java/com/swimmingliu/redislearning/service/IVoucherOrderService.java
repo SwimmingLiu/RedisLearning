@@ -1,6 +1,7 @@
 package com.swimmingliu.redislearning.service;
 
 import com.swimmingliu.redislearning.dto.Result;
+import com.swimmingliu.redislearning.entity.SeckillVoucher;
 import com.swimmingliu.redislearning.entity.VoucherOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -15,4 +16,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface IVoucherOrderService extends IService<VoucherOrder> {
 
     Result seckillVoucher(Long voucherId);
+
+//    Result createVoucherOrder(Long voucherId, SeckillVoucher seckillVoucher);
 }

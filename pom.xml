@@ -34,6 +34,8 @@
         <mysql>8.0.33</mysql>
         <hutool>5.8.32</hutool>
         <knife4j>4.5.0</knife4j>
+        <spring-aspects>6.2.0</spring-aspects>
+        <redisson>3.39.0</redisson>
     </properties>
     <dependencies>
         <dependency>
@@ -92,7 +94,16 @@
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
             <version>${knife4j}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <version>${spring-aspects}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>${redisson}</version>
+        </dependency>
     </dependencies>
 
     <build>
