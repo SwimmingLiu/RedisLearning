@@ -1,5 +1,6 @@
 package com.swimmingliu.redislearning.service;
 
+import com.swimmingliu.redislearning.dto.Result;
 import com.swimmingliu.redislearning.entity.Blog;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -13,4 +14,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IBlogService extends IService<Blog> {
 
+    Result queryBlogById(Long id);
+
+    Result likeBlog(Long id);
+
+    Result queryBlogLikes(Long id);
 }

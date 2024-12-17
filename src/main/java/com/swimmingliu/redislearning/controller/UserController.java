@@ -1,9 +1,11 @@
 package com.swimmingliu.redislearning.controller;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import com.swimmingliu.redislearning.dto.LoginFormDTO;
 import com.swimmingliu.redislearning.dto.Result;
 import com.swimmingliu.redislearning.dto.UserDTO;
+import com.swimmingliu.redislearning.entity.User;
 import com.swimmingliu.redislearning.entity.UserInfo;
 import com.swimmingliu.redislearning.service.IUserInfoService;
 import com.swimmingliu.redislearning.service.IUserService;
@@ -14,6 +16,8 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import static com.swimmingliu.redislearning.constant.MessageConstants.USER_NOT_FOUND;
 
 
 /**
@@ -86,5 +90,20 @@ public class UserController {
         info.setUpdateTime(null);
         // 返回
         return Result.ok(info);
+    }
+
+    /**
+     * 根据ID查询用户信息
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    public Result queryUserById(@PathVariable("id") Long id){
+        User user = userService.getById(id);
+        if (user == null){
+            return Result.fail(USER_NOT_FOUND);
+        }
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        return Result.ok(userDTO);
     }
 }

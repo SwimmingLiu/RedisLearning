@@ -50,10 +50,15 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         // 解决缓存击穿 - 逻辑过期
         Shop shop = cacheCient.queryWithLogicExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById,
                 CACHE_SHOP_TTL, TimeUnit.MINUTES, LOCK_SHOP_KEY, LOCK_SHOP_TTL);
-        if (shop == null) {
-            return Result.fail("店铺不存在");
+        if (shop != null) {
+            return Result.ok(shop);
         }
-        return Result.ok(shop);
+        // 缓存第一次不存在，查询数据库
+        shop = getById(id);
+        if (shop == null){
+             return Result.fail("店铺不存在");
+        }
+        return  Result.ok(shop);
     }
 
     @Override

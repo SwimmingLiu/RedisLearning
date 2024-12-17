@@ -80,7 +80,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         // 1. 执行lua脚本进行前置判断：订单是否存在？库存是否足够？一人一单判断
         Long result = stringRedisTemplate.execute(SECKILL_SCRIPT, Collections.emptyList(),
                 voucherId.toString(), userId.toString(), orderId.toString());
-        // TODO 阻塞队列执行下单
+        // TODO 阻塞队列执行下单 -> 后续使用MQ执行
         int resultCode = result.intValue();
         if (resultCode != 0) {
             return Result.fail(resultCode == 1 ?
