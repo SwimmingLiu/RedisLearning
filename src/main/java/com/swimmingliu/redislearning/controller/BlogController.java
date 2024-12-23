@@ -44,13 +44,7 @@ public class BlogController {
 
     @PostMapping
     public Result saveBlog(@RequestBody Blog blog) {
-        // 获取登录用户
-        UserDTO user = UserHolder.getUser();
-        blog.setUserId(user.getId());
-        // 保存探店博文
-        blogService.save(blog);
-        // 返回id
-        return Result.ok(blog.getId());
+        return blogService.saveBlog(blog);
     }
 
     /**
@@ -107,6 +101,7 @@ public class BlogController {
 
     /**
      * 根据userId查询Blog
+     *
      * @param current
      * @param id
      * @return
@@ -114,13 +109,21 @@ public class BlogController {
     @GetMapping("/of/user")
     public Result queryBlogByUserId(
             @RequestParam(value = "current", defaultValue = "1") Integer current,
-            @RequestParam(value = "id") Long id){
+            @RequestParam(value = "id") Long id) {
         LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
                 .eq(Blog::getUserId, id);
         Page<Blog> blogPage = new Page<>(current, MAX_PAGE_SIZE);
         List<Blog> records = blogService.page(blogPage, wrapper).getRecords();
         return Result.ok(records);
     }
+
+    @GetMapping("/of/follow")
+    public Result followerBlogs(
+            @RequestParam("lastId") Long max,
+            @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return blogService.findFollowerBlogs(max, offset);
+    }
+
     /**
      * 用set实现点赞
      */

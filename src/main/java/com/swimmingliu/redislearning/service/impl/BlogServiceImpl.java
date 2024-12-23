@@ -6,24 +6,29 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.swimmingliu.redislearning.context.UserHolder;
 import com.swimmingliu.redislearning.dto.Result;
+import com.swimmingliu.redislearning.dto.ScrollResult;
 import com.swimmingliu.redislearning.dto.UserDTO;
 import com.swimmingliu.redislearning.entity.Blog;
+import com.swimmingliu.redislearning.entity.Follow;
 import com.swimmingliu.redislearning.entity.User;
 import com.swimmingliu.redislearning.mapper.BlogMapper;
 import com.swimmingliu.redislearning.service.IBlogService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.swimmingliu.redislearning.service.IFollowService;
 import com.swimmingliu.redislearning.service.IUserService;
 import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.swimmingliu.redislearning.constant.MessageConstants.BLOG_NOT_FOUND;
+import static com.swimmingliu.redislearning.constant.MessageConstants.FAIL_TO_PUBLISH_BLOG;
 import static com.swimmingliu.redislearning.constant.RedisConstants.BLOG_LIKED_KEY;
+import static com.swimmingliu.redislearning.constant.RedisConstants.FEED_KEY;
+import static com.swimmingliu.redislearning.constant.SystemConstants.DEFAULT_FOLLOW_BLOG_PAGE_SIZE;
 
 /**
  * <p>
@@ -40,6 +45,8 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private IUserService userService;
+    @Resource
+    private IFollowService followService;
 
     /**
      * 根据ID查询Blog
@@ -140,8 +147,8 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         // 2. 判断有那些用户点赞了这篇博客
         String key = BLOG_LIKED_KEY + id;
         // 查询TOP5的点赞用户
-        Set<String> userIds = stringRedisTemplate.opsForZSet().range(key, 0 , 4);
-        if (userIds == null || userIds.isEmpty()){
+        Set<String> userIds = stringRedisTemplate.opsForZSet().range(key, 0, 4);
+        if (userIds == null || userIds.isEmpty()) {
             return Result.ok(Collections.emptyList());
         }
         String userIdsStr = StrUtil.join(",", userIds);
@@ -154,6 +161,87 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
                 .map(user -> BeanUtil.copyProperties(user, UserDTO.class))
                 .collect(Collectors.toList());
         return Result.ok(userDTOS);
+    }
+
+    /**
+     * 查询关注的人博客
+     *
+     * @param max
+     * @param offset
+     * @return
+     */
+    @Override
+    public Result findFollowerBlogs(Long max, Integer offset) {
+        // max 表示第一条消息对应的时间，offset表示取几页数据
+
+        // 1. 获取当前的用户信息
+        Long userId = UserHolder.getUser().getId();
+        // 2. 查询当前用户的收件箱
+        String key = FEED_KEY + userId;
+        Set<ZSetOperations.TypedTuple<String>> mailBoxes = stringRedisTemplate.opsForZSet()
+                .reverseRangeByScoreWithScores(key, 0, max, offset, DEFAULT_FOLLOW_BLOG_PAGE_SIZE);
+        // 3. 判断收件箱是否为空
+        if (mailBoxes == null || mailBoxes.isEmpty()) {
+            return Result.ok(Collections.emptyList());
+        }
+        // 4. 读取mailBoxes当中的Blog信息, 同时剔除相同得分
+        List<Long> blogIds = new ArrayList<>(mailBoxes.size());
+        int offsetMin = 1;
+        long minTime = 0;
+        for (ZSetOperations.TypedTuple<String> mailBox : mailBoxes) {
+            // 4.1 获取博客id
+            blogIds.add(Long.valueOf(Objects.requireNonNull(mailBox.getValue())));
+            // 4.2 获取博客对应的得分(时间)
+            long time = Objects.requireNonNull(mailBox.getScore()).longValue();
+            if (time == minTime) {
+                offsetMin += 1;
+            } else {
+                minTime = time;
+                offsetMin = 1;
+            }
+        }
+        offsetMin = minTime == max ? offsetMin : offsetMin + offset;
+        // 5. 根据Id查询blog
+        String blogIdStr = StrUtil.join(",", blogIds);
+        LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<Blog>()
+                .in(Blog::getId, blogIds)
+                .last("order by FIELD(id," + blogIdStr + ")");
+        List<Blog> blogs = list(wrapper);
+        for (Blog blog : blogs) {
+            // 查询blog相关的user
+            queryRelatedUser(blog);
+            // 查询blog是否被点赞
+            queryBlogIsLiked(blog);
+        }
+        ScrollResult scrollResult = ScrollResult.builder()
+                .minTime(minTime)
+                .offset(offsetMin)
+                .list(blogs).build();
+        return Result.ok(scrollResult);
+    }
+
+    @Override
+    public Result saveBlog(Blog blog) {
+        // 1. 获取登录用户
+        UserDTO user = UserHolder.getUser();
+        blog.setUserId(user.getId());
+        // 2. 保存探店博文
+        boolean isSuccess = this.save(blog);
+        if (!isSuccess) {
+            return Result.fail(FAIL_TO_PUBLISH_BLOG);
+        }
+        // 3. 发送到粉丝邮箱
+        // 3.1 获取所有粉丝的id
+        LambdaQueryWrapper<Follow> wrapper = new LambdaQueryWrapper<Follow>()
+                .eq(Follow::getFollowUserId, user.getId());
+        List<Follow> fansIds = followService.list(wrapper);
+        // 3.2 推送到所有粉丝的收件箱
+        fansIds.forEach(fansId -> {
+            String key = FEED_KEY + fansId.getUserId();
+            stringRedisTemplate.opsForZSet().add(key, blog.getId().toString(), System.currentTimeMillis());
+        });
+        // 4. 返回id
+        return Result.ok(blog.getId());
     }
 
 }

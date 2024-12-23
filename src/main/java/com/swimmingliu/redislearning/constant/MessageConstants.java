@@ -13,6 +13,7 @@ public class MessageConstants {
     public static final String REPEAT_BUY_SECKILLVOUCHER_NOT_ALLOWED = "您已购买过该优惠券，单个用户只能购买一次";
     public static final String BLOG_NOT_FOUND = "笔记不存在";
     public static final String USER_NOT_FOUND = "用户不存在";
+    public static final String FAIL_TO_PUBLISH_BLOG = "发布笔记失败";
 
 
 }
