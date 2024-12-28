@@ -97,6 +97,7 @@ public class UserController {
      * @param id
      * @return
      */
+     @Operation(summary = "根据ID查询用户信息")
     @GetMapping("/{id}")
     public Result queryUserById(@PathVariable("id") Long id){
         User user = userService.getById(id);
@@ -105,5 +106,25 @@ public class UserController {
         }
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         return Result.ok(userDTO);
+    }
+
+    /**
+     * 用户签到
+     * @return
+     */
+    @Operation(summary = "用户签到")
+    @PutMapping("/sign")
+    public Result sign(){
+        return userService.sign();
+    }
+
+    /**
+     * 用户签到统计
+     * @return
+     */
+    @Operation(summary = "用户签到统计")
+    @GetMapping("/sign/count")
+    public Result signCount(){
+        return userService.signCount();
     }
 }

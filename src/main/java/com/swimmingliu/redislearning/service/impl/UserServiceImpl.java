@@ -17,10 +17,14 @@ import com.swimmingliu.redislearning.context.UserHolder;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +38,7 @@ import static com.swimmingliu.redislearning.constant.SystemConstants.USER_NICK_N
  * </p>
  *
  * @author SwimmingLiu
- * @author  2024-11-15
+ * @author 2024-11-15
  */
 @Service
 @Slf4j
@@ -42,8 +46,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
     /**
      * 发送验证码
+     *
      * @param phone
      * @param session
      * @return
@@ -66,27 +72,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String phone = loginForm.getPhone();
         String codeRequest = loginForm.getCode();
         // 1. 判断手机号码是否有效
-        if (RegexUtils.isPhoneInvalid(phone)){
+        if (RegexUtils.isPhoneInvalid(phone)) {
             return Result.fail(PHONE_FORMAT_INVALID);
         }
         // 2. 校验手机号和验证码是否对应
-        if (RegexUtils.isCodeInvalid(codeRequest)){
+        if (RegexUtils.isCodeInvalid(codeRequest)) {
             return Result.fail(LOGIN_CODE_FORMAT_INVALID);
         }
         // 从redis读取phone对应的code
         String code = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
-        if (code == null){
+        if (code == null) {
             return Result.fail(LOGIN_CODE_EXPIRED);
-        }
-        else if (!code.equals(codeRequest)){
+        } else if (!code.equals(codeRequest)) {
             return Result.fail(LOGIN_CODE_ERROR);
         }
         // 3. 查询手机号用户
         User user = query().eq("phone", phone).one();
         // 4. 判断用户是否存在
         // 4.1 不存在，创建新用户
-        if (user == null){
-           user = createUserWithPhone(phone);
+        if (user == null) {
+            user = createUserWithPhone(phone);
         }
         // 4.2 存在，则保存用户信息到redis， 以token为key
         // 生成token
@@ -114,7 +119,54 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     }
 
-    private User createUserWithPhone(String phone){
+    @Override
+    public Result sign() {
+        // 1. 获取用户Id
+        Long userId = UserHolder.getUser().getId();
+        // 2. 获取当前日期
+        LocalDateTime now = LocalDateTime.now();
+        String timeFormat = now.format(DateTimeFormatter.ofPattern(":yyyy:MM"));
+        String key = USER_SIGN_KEY + userId + timeFormat;
+        int dayOfMonth = now.getDayOfMonth();
+        // 3. 存入redis
+        stringRedisTemplate.opsForValue().setBit(key, dayOfMonth - 1, true);
+        return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        // 1. 获取当前id
+        Long userId = UserHolder.getUser().getId();
+        // 2. 获取当前日期
+        LocalDateTime now = LocalDateTime.now();
+        String timeFormat = now.format(DateTimeFormatter.ofPattern(":yyyy:MM"));
+        String key = USER_SIGN_KEY + userId + timeFormat;
+        int dayOfMonth = now.getDayOfMonth();
+        // 3. 获取Redis当中的签到情况
+        List<Long> result = stringRedisTemplate.opsForValue().bitField(
+                key,
+                BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth))
+                        .valueAt(0)
+        );
+        if (result == null || result.isEmpty()){
+            return Result.ok(0);
+        }
+        Long num = result.get(0);
+        if (num == null || num == 0){
+            return Result.ok(0);
+        }
+        // 4. 循环遍历
+        int count = 0;
+        while(true){
+            if ((num & 1) == 0) break;
+            else count ++;
+            num >>>= 1;
+        }
+        return Result.ok(count);
+    }
+
+    private User createUserWithPhone(String phone) {
         User user = User.builder()
                 .phone(phone)
                 .nickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10))

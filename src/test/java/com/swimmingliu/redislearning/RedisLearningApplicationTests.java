@@ -9,12 +9,22 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.RedisGeoCommands;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.domain.geo.GeoLocation;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.swimmingliu.redislearning.constant.RedisConstants.CACHE_SHOP_KEY;
+import static com.swimmingliu.redislearning.constant.RedisConstants.SHOP_GEO_KEY;
 
 @SpringBootTest
 class RedisLearningApplicationTests {
@@ -28,6 +38,8 @@ class RedisLearningApplicationTests {
     @Autowired
     private RedissonClient redissonClient;
     private final ExecutorService es = Executors.newFixedThreadPool(500);
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @Test
     void putShopCacheWithLogicExpire() {
@@ -64,8 +76,30 @@ class RedisLearningApplicationTests {
             return;
         try {
             System.out.println("上锁成功, 开始执行任务...");
-        }finally {
+        } finally {
             lock.unlock();
+        }
+    }
+
+    @Test
+    void loadShopData() {
+        // 1. 获取所有的商店信息
+        List<Shop> shopList = shopService.list();
+        // 2. 按照商品类型进行分类
+        Map<Long, List<Shop>> shopByType = shopList.stream().collect(Collectors.groupingBy(Shop::getTypeId));
+        // 3. 分批存入redis
+        for (Map.Entry<Long, List<Shop>> entry : shopByType.entrySet()) {
+            Long typeId = entry.getKey();
+            String key = SHOP_GEO_KEY + typeId;
+            List<Shop> shops = entry.getValue();
+            List<RedisGeoCommands.GeoLocation<String>> locations = new ArrayList<>(shops.size());
+            for (Shop shop : shops) {
+                locations.add(new RedisGeoCommands.GeoLocation<>(
+                        shop.getId().toString(),
+                        new Point(shop.getX(), shop.getY())
+                ));
+            }
+            stringRedisTemplate.opsForGeo().add(key, locations);
         }
     }
 }
